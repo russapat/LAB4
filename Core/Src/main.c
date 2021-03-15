@@ -47,6 +47,11 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint32_t ADCData[4] = {0};
+uint32_t TimeDelay = 0;
+uint16_t Check = 0;
+uint16_t Check_Pinstate = 0;
+uint8_t True_False = 0;
+uint32_t Time_Update = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -194,7 +199,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -337,7 +342,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
@@ -359,10 +364,28 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if(GPIO_Pin == GPIO_PIN_13)
 	{
-		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+		Time_Update = HAL_GetTick();
+		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET)
+		{
+			Time_Update = HAL_GetTick();
+			Check = 1;
+			TimeDelay = 5000;
+			if(HAL_GetTick() >= TimeDelay)
+			{
+				Check = 3;
+			}
+			else {
+				Time_Update = HAL_GetTick();
+				Check = 4;
+			}
+			}
+	else {
+		Check = 5;
+	}
 
 	}
 }
+
 /* USER CODE END 4 */
 
 /**
