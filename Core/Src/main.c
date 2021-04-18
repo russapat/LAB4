@@ -48,10 +48,14 @@ UART_HandleTypeDef huart2;
 /* USER CODE BEGIN PV */
 uint32_t ADCData[4] = {0};
 uint32_t TimeDelay = 0;
-uint16_t Check = 0;
-uint16_t Check_Pinstate = 0;
-uint8_t True_False = 0;
+uint32_t Time_Push = 0;
+uint32_t Time_Pull = 0;
 uint32_t Time_Update = 0;
+uint64_t Timestamp = 0;
+uint32_t Data0 = 0;
+uint32_t Data1 = 0;
+uint32_t on = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,6 +66,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
+void HAL_TIM_PeriodElapsedCallback();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -102,6 +107,7 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   HAL_ADC_Start_DMA(&hadc1, ADCData, 4);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -111,6 +117,14 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  if(HAL_GetTick()-Timestamp >= (1000 + ((22695477*Data0)+Data1)%10000))
+	  	{
+		  	on = 3;
+		  	Timestamp = HAL_GetTick();
+	  		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, SET);
+	  		Time_Push = HAL_GetTick();
+	  	}
+
   }
   /* USER CODE END 3 */
 }
@@ -136,9 +150,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 336;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -153,7 +167,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -199,7 +213,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_144CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -362,26 +376,22 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+
 	if(GPIO_Pin == GPIO_PIN_13)
 	{
-		Time_Update = HAL_GetTick();
 		if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_RESET)
 		{
-			Time_Update = HAL_GetTick();
-			Check = 1;
-			TimeDelay = 5000;
-			if(HAL_GetTick() >= TimeDelay)
-			{
-				Check = 3;
+			Timestamp = HAL_GetTick();
+			Data0 = ADCData[0];
+			Data1 = ADCData[1];
+			on = 1;
+
+		}
+		else {
+			Time_Pull = HAL_GetTick();
+			Time_Update = Time_Pull - Time_Push;
+	  		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, RESET);
 			}
-			else {
-				Time_Update = HAL_GetTick();
-				Check = 4;
-			}
-			}
-	else {
-		Check = 5;
-	}
 
 	}
 }
